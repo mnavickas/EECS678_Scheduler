@@ -1,3 +1,4 @@
 obj/
 queuetest
 simulator
+*.o

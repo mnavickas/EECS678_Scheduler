@@ -4,13 +4,19 @@
 #ifndef LIBPRIQUEUE_H_
 #define LIBPRIQUEUE_H_
 
+typedef int (*compare_func_t) ( const void *a, const void *b);
+
 /**
   Priqueue Data Structure
 */
 typedef struct _priqueue_t
 {
-
+    void **queue_array;
+    uint max_size;
+    uint curr_size;
+    compare_func_t comparer;
 } priqueue_t;
+
 
 
 void   priqueue_init     (priqueue_t *q, int(*comparer)(const void *, const void *));
