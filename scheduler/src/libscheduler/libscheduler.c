@@ -103,6 +103,17 @@ void scheduler_start_up(int cores, scheme_t scheme)
 	}
 }
 
+int idleCore()
+{
+	for(int i = 0; i< scheduler_ptr->core_count; i++)
+	{
+		if( scheduler_ptr->current_jobs_on_cores[i] == NULL )
+		{
+			return i;
+		}
+	}
+	return -1;
+}
 
 /**
   Called when a new job arrives.
@@ -132,7 +143,19 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
     job->priority = priority;
     job->total_time_needed = running_time;
 
-	return -1;
+    //either schedule it or place it in the queue;
+	int first_core = idleCore();
+	if( first_core == -1 )
+	{
+		priqueue_offer ( &scheduler_ptr->job_queue, job);
+	}
+	else
+	{
+		scheduler_ptr->current_jobs_on_cores[first_core] = job;
+		job->last_start_time = time;
+	}
+
+	return first_core;
 }
 
 
