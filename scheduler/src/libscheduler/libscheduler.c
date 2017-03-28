@@ -126,6 +126,12 @@ void scheduler_start_up(int cores, scheme_t scheme)
  */
 int scheduler_new_job(int job_number, int time, int running_time, int priority)
 {
+    job_t* job = calloc( 1, sizeof(job_t));
+    job->pid = job_number;
+    job->arrival_time = time;
+    job->priority = priority;
+    job->total_time_needed = running_time;
+
 	return -1;
 }
 
