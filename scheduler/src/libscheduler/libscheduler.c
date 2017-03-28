@@ -175,7 +175,35 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
  */
 int scheduler_job_finished(int core_id, int job_number, int time)
 {
-	return -1;
+    job_t *old_job = scheduler_ptr->current_jobs_on_cores[core_id];
+    scheduler_ptr->current_jobs_on_cores[core_id] = NULL;
+
+    scheduler_ptr->total_jobs_count++;
+	scheduler_ptr->total_wait_time += (time - old_job->arrival_time - old_job->total_time_needed);
+	scheduler_ptr->total_turn_around_time += (time - old_job->arrival_time);
+
+    free( old_job );
+
+    // Check for a new job
+    job_t *new_job = priqueue_poll( &scheduler_ptr->job_queue );
+	if( NULL == new_job )
+	{
+		return -1;
+	}
+    else
+	{
+		if( 0 == new_job->used_time )
+		{
+            // this is the first time we have scheduled it, update response
+            // time as such.
+			scheduler_ptr->total_response_time += (time - new_job->arrival_time);
+		}
+        // place it on a core, and update its last start time
+		scheduler_ptr->current_jobs_on_cores[core_id] = new_job;
+		new_job->last_start_time = time;
+
+		return new_job->pid;
+	}
 }
 
 
