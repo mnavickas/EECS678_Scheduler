@@ -178,8 +178,12 @@ int scheduler_quantum_expired(int core_id, int time)
  */
 float scheduler_average_waiting_time()
 {
-	return 0.0;
+    if(scheduler_ptr->total_jobs_count == 0)
+		return 0;
+	else
+		return (float)scheduler_ptr->total_wait_time/(float)scheduler_ptr->total_jobs_count;
 }
+
 
 
 /**
@@ -191,7 +195,11 @@ float scheduler_average_waiting_time()
  */
 float scheduler_average_turnaround_time()
 {
-	return 0.0;
+    if(scheduler_ptr->total_jobs_count == 0)
+    	return 0.0;
+    else
+        return (float)scheduler_ptr->total_turn_around_time/(float)scheduler_ptr->total_jobs_count;
+
 }
 
 
@@ -204,7 +212,10 @@ float scheduler_average_turnaround_time()
  */
 float scheduler_average_response_time()
 {
-	return 0.0;
+    if(scheduler_ptr->total_jobs_count == 0)
+		return 0.0;
+	else
+		return (float)scheduler_ptr->total_response_time/(float)scheduler_ptr->total_jobs_count;
 }
 
 
