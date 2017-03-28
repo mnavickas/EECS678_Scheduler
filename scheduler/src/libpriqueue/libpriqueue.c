@@ -44,7 +44,8 @@ int priqueue_offer(priqueue_t *q, void *ptr)
 	uint curr_idx = q->curr_size;
 
 	//put it in the back
-	q->queue_array[q->curr_size++] = ptr;
+	q->queue_array[q->curr_size] = ptr;
+	q->curr_size++;
 
 	//sift it forward
 	//we aren't being paid to be efficient. so...
