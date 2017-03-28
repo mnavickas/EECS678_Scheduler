@@ -11,14 +11,17 @@
 
 /**
   Stores information making up a job to be scheduled including any statistics.
-
   You may need to define some global variables or a struct to store your job queue elements. 
 */
 typedef struct _job_t
 {
-
+  int pid;
+  int arrival_time;
+  int priority;
+  int used_time;
+  int total_time_needed;
+  int last_start_time;
 } job_t;
-
 
 /**
   Initalizes the scheduler.
