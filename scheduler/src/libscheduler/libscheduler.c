@@ -216,7 +216,9 @@ float scheduler_average_response_time()
 */
 void scheduler_clean_up()
 {
-
+    priqueue_destroy( &scheduler_ptr->job_queue );
+	free( scheduler_ptr->current_jobs_on_cores );
+	free( scheduler_ptr );
 }
 
 
