@@ -2,3 +2,4 @@ obj/
 queuetest
 simulator
 *.o
+scheduler/src/libpriqueue/libpriqueue.o
