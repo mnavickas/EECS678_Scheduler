@@ -21,7 +21,13 @@ typedef struct _job_t
   int used_time;
   int total_time_needed;
   int last_start_time;
+  int job_response_time;
 } job_t;
+
+int remainingTime(const job_t *job)
+{
+    return job->total_time_needed - job->used_time;
+}
 
 typedef struct _scheduler_t
 {
@@ -39,6 +45,7 @@ typedef struct _scheduler_t
 
 scheduler_t *scheduler_ptr;
 
+
 //These Sort the Queues
 int FCFScompare(const void *a, const void *b)
 {
@@ -49,7 +56,16 @@ int SJFcompare(const void *a, const void *b)
 {
   job_t const *left = (job_t*)a;
   job_t const *right = (job_t*)b;
-  return left->total_time_needed - right->total_time_needed;
+
+  if( remainingTime(left) == remainingTime(right) )
+  {
+       return ( left->arrival_time - right->arrival_time ) ;
+  }
+  else
+  {
+       return ( remainingTime(left) - remainingTime(right) ) ;
+  }
+
 }
 
 int PRIcompare(const void *a, const void *b)
@@ -85,6 +101,7 @@ void scheduler_start_up(int cores, scheme_t scheme)
     scheduler_ptr = (scheduler_t *) calloc( 1, sizeof(scheduler_t) );
 	scheduler_ptr->core_count = cores;
 	scheduler_ptr->current_jobs_on_cores = (job_t **) calloc( cores , sizeof(job_t*) );
+    scheduler_ptr->scheduler_scheme = scheme;
 
 	switch(scheme)
 	{
@@ -115,6 +132,60 @@ int idleCore()
 	return -1;
 }
 
+int findLongestRemainingJob()
+{
+    int core = -1;
+    int longest_length = 0;
+    int arrival_time = 0;
+    for(int i = 0; i< scheduler_ptr->core_count; i++)
+    {
+        if( scheduler_ptr->current_jobs_on_cores[i] != NULL && remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) > longest_length )
+        {
+            longest_length = remainingTime( scheduler_ptr->current_jobs_on_cores[i] );
+            arrival_time =  scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
+            core = i;
+        }
+        else if ( remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) > longest_length )
+        {
+            if( scheduler_ptr->current_jobs_on_cores[i]->arrival_time >  arrival_time )
+            {
+                arrival_time = scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
+                core = i;
+            }
+        }
+    }
+    return core;
+}
+
+int findWorstPriorityJob()
+{
+    int core = -1;
+    int worst_priority = 0;
+    int arrival_time = 0;
+    for(int i = 0; i< scheduler_ptr->core_count; i++)
+    {
+        if( scheduler_ptr->current_jobs_on_cores[i] != NULL)
+        {
+            if( scheduler_ptr->current_jobs_on_cores[i]->priority > worst_priority )
+            {
+                worst_priority = scheduler_ptr->current_jobs_on_cores[i]->priority;
+                arrival_time = scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
+                core = i;
+            }
+            else if ( scheduler_ptr->current_jobs_on_cores[i]->priority == worst_priority )
+            {
+                if( scheduler_ptr->current_jobs_on_cores[i]->arrival_time >  arrival_time )
+                {
+                    arrival_time = scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
+                    core = i;
+                }
+            }
+
+        }
+    }
+    return core;
+}
+
 /**
   Called when a new job arrives.
 
@@ -142,20 +213,86 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
     job->arrival_time = time;
     job->priority = priority;
     job->total_time_needed = running_time;
-
+    job->used_time = 0;
+    job->last_start_time = 0;
+    job->job_response_time = 0;
+    const scheme_t scheme = scheduler_ptr->scheduler_scheme;
     //either schedule it or place it in the queue;
-	int first_core = idleCore();
-	if( first_core == -1 )
-	{
-		priqueue_offer ( &scheduler_ptr->job_queue, job);
-	}
-	else
-	{
-		scheduler_ptr->current_jobs_on_cores[first_core] = job;
-		job->last_start_time = time;
-	}
 
-	return first_core;
+    int first_core = idleCore();
+    if( first_core != -1 )
+    {
+        scheduler_ptr->current_jobs_on_cores[first_core] = job;
+        job->last_start_time = time;
+        return first_core;
+    }
+
+
+    if( scheme == PSJF )
+    {
+        int longest_job = findLongestRemainingJob();
+        int longest_job_last_remaining_time = remainingTime( scheduler_ptr->current_jobs_on_cores[longest_job] );
+        int longest_job_current_remaining_time = longest_job_last_remaining_time - ( time - scheduler_ptr->current_jobs_on_cores[longest_job]->last_start_time );
+
+        if( longest_job_current_remaining_time <=  job->total_time_needed )
+        {
+            // all jobs on cores have lower times, thus higher priority, add this one to queue
+            priqueue_offer ( &scheduler_ptr->job_queue, job );
+            return -1;
+        }
+        else
+        {
+            //remove old
+            job_t *old_job = scheduler_ptr->current_jobs_on_cores[longest_job];
+            //log how much time it used
+            old_job->used_time += (time - old_job->last_start_time );
+
+            //replace with new
+            job->last_start_time = time;
+            scheduler_ptr->current_jobs_on_cores[longest_job] = job;
+
+            //push old to queue
+            priqueue_offer ( &scheduler_ptr->job_queue, old_job );
+            return longest_job;
+        }
+
+    }
+    else if( scheme == PPRI )
+    {
+        int worst_priority_idx =  findWorstPriorityJob();
+
+        if( scheduler_ptr->current_jobs_on_cores[worst_priority_idx]->priority <= job->priority )
+        {
+            // all jobs on cores have lower times, thus higher priority, add this one to queue
+            priqueue_offer ( &scheduler_ptr->job_queue, job );
+            return -1;
+        }
+        else
+        {
+            //remove old
+            job_t *old_job = scheduler_ptr->current_jobs_on_cores[worst_priority_idx];
+            //log how much time it used
+            old_job->used_time += (time - old_job->last_start_time );
+
+            //replace with new
+            job->last_start_time = time;
+            scheduler_ptr->current_jobs_on_cores[worst_priority_idx] = job;
+
+            //push old to queue
+            priqueue_offer ( &scheduler_ptr->job_queue, old_job );
+            return worst_priority_idx;
+        }
+
+    }
+    else if( scheme == RR || scheme == PRI || scheme == FCFS || scheme == SJF )
+    {
+    	if( first_core == -1 )
+    	{
+    		priqueue_offer ( &scheduler_ptr->job_queue, job);
+    	}
+    }
+
+    return -1;
 }
 
 
@@ -181,12 +318,13 @@ int scheduler_job_finished(int core_id, int job_number, int time)
     scheduler_ptr->total_jobs_count++;
 	scheduler_ptr->total_wait_time += (time - old_job->arrival_time - old_job->total_time_needed);
 	scheduler_ptr->total_turn_around_time += (time - old_job->arrival_time);
+    scheduler_ptr->total_response_time += old_job->job_response_time;
 
     free( old_job );
 
     // Check for a new job
     job_t *new_job = priqueue_poll( &scheduler_ptr->job_queue );
-	if( NULL == new_job )
+	if( !new_job )
 	{
 		return -1;
 	}
@@ -196,7 +334,7 @@ int scheduler_job_finished(int core_id, int job_number, int time)
 		{
             // this is the first time we have scheduled it, update response
             // time as such.
-			scheduler_ptr->total_response_time += (time - new_job->arrival_time);
+			new_job->job_response_time = ( time - new_job->arrival_time );
 		}
         // place it on a core, and update its last start time
 		scheduler_ptr->current_jobs_on_cores[core_id] = new_job;
@@ -222,7 +360,28 @@ int scheduler_job_finished(int core_id, int job_number, int time)
  */
 int scheduler_quantum_expired(int core_id, int time)
 {
-	return -1;
+	job_t *old = scheduler_ptr->current_jobs_on_cores[core_id];
+    old->used_time += ( time - old->last_start_time );
+    priqueue_offer( &scheduler_ptr->job_queue, old);
+
+    job_t *new = priqueue_poll( &scheduler_ptr->job_queue );
+    if( !new )
+    {
+        return -1;
+    }
+    else
+    {
+        if( 0 == new->used_time )
+        {
+            // this is the first time we have scheduled it, update response
+            // time as such.
+            new->job_response_time = ( time - new->arrival_time );
+        }
+        new->last_start_time = time;
+        scheduler_ptr->current_jobs_on_cores[core_id] = new;
+
+        return new->pid;
+    }
 }
 
 
