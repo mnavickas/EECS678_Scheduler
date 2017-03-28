@@ -18,7 +18,7 @@
  */
 void priqueue_init(priqueue_t *q, compare_func_t comparer)
 {
-	q->queue_array = malloc (2 * sizeof(void*) );
+	q->queue_array = calloc (2 , sizeof(void*) );
 	q->max_size = 2;
 	q->curr_size = 0;
 	q->comparer = comparer;
@@ -106,7 +106,7 @@ void *priqueue_poll(priqueue_t *q)
 
   @param q a pointer to an instance of the priqueue_t data structure
   @param index position of retrieved element
-  @return the index'th element in the queue
+   @return the index'th element in the queue
   @return NULL if the queue does not contain the index'th element
  */
 void *priqueue_at(priqueue_t *q, int index)
