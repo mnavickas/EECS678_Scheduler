@@ -23,6 +23,51 @@ typedef struct _job_t
   int last_start_time;
 } job_t;
 
+typedef struct _scheduler_t
+{
+  scheme_t scheduler_scheme;
+  priqueue_t job_queue;
+
+  int core_count;
+  job_t** current_jobs_on_cores;
+
+  int total_wait_time;
+  int total_response_time;
+  int total_turn_around_time;
+  int total_jobs_count;
+} scheduler_t;
+
+scheduler_t *scheduler_ptr;
+
+//These Sort the Queues
+int FCFScompare(const void *a, const void *b)
+{
+  return -1;
+}
+
+int SJFcompare(const void *a, const void *b)
+{
+  job_t const *left = (job_t*)a;
+  job_t const *right = (job_t*)b;
+  return left->total_time_needed - right->total_time_needed; 
+}
+
+int PRIcompare(const void *a, const void *b)
+{
+  job_t const *left = (job_t*)a;
+  job_t const *right = (job_t*)b;
+
+  if( left->priority == right->priority)
+  {
+    return (right->arrival_time - left->arrival_time) * -1; 
+  }
+  else
+  {
+    return (right->priority - left->priority) * -1; 
+  }
+  
+}
+
 /**
   Initalizes the scheduler.
  
