@@ -215,7 +215,9 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
     job->arrival_time = time;
     job->priority = priority;
     job->total_time_needed = running_time;
-
+    job->used_time = 0;
+    job->last_start_time = 0;
+    job->job_response_time = 0;
     const scheme_t scheme = scheduler_ptr->scheduler_scheme;
     //either schedule it or place it in the queue;
 
