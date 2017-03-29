@@ -138,18 +138,21 @@ int findLongestRemainingJob()
     int arrival_time = 0;
     for(int i = 0; i< scheduler_ptr->core_count; i++)
     {
-        if( scheduler_ptr->current_jobs_on_cores[i] != NULL && remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) > longest_length )
+        if( scheduler_ptr->current_jobs_on_cores[i] != NULL )
         {
-            longest_length = remainingTime( scheduler_ptr->current_jobs_on_cores[i] );
-            arrival_time =  scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
-            core = i;
-        }
-        else if ( remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) == longest_length )
-        {
-            if( scheduler_ptr->current_jobs_on_cores[i]->arrival_time >  arrival_time )
+            if ( remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) > longest_length )
             {
-                arrival_time = scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
+                longest_length = remainingTime( scheduler_ptr->current_jobs_on_cores[i] );
+                arrival_time =  scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
                 core = i;
+            }
+            else if ( remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) == longest_length )
+            {
+                if( scheduler_ptr->current_jobs_on_cores[i]->arrival_time >  arrival_time )
+                {
+                    arrival_time = scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
+                    core = i;
+                }
             }
         }
     }
@@ -212,9 +215,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
     job->arrival_time = time;
     job->priority = priority;
     job->total_time_needed = running_time;
-    job->used_time = 0;
-    job->last_start_time = 0;
-    job->job_response_time = 0;
+
     const scheme_t scheme = scheduler_ptr->scheduler_scheme;
     //either schedule it or place it in the queue;
 
@@ -254,7 +255,6 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
             priqueue_offer ( &scheduler_ptr->job_queue, old_job );
             return longest_job;
         }
-
     }
     else if( scheme == PPRI )
     {
@@ -290,7 +290,6 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
     		priqueue_offer ( &scheduler_ptr->job_queue, job);
     	}
     }
-
     return -1;
 }
 
