@@ -65,7 +65,6 @@ int SJFcompare(const void *a, const void *b)
   {
        return ( remainingTime(left) - remainingTime(right) ) ;
   }
-
 }
 
 int PRIcompare(const void *a, const void *b)
@@ -145,7 +144,7 @@ int findLongestRemainingJob()
             arrival_time =  scheduler_ptr->current_jobs_on_cores[i]->arrival_time;
             core = i;
         }
-        else if ( remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) > longest_length )
+        else if ( remainingTime( scheduler_ptr->current_jobs_on_cores[i] ) == longest_length )
         {
             if( scheduler_ptr->current_jobs_on_cores[i]->arrival_time >  arrival_time )
             {
